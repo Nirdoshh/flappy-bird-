@@ -1,8 +1,10 @@
-# Flappy Bird
+# Flappy Peacock
 
-A complete, small Flappy Bird–style game written in plain HTML, CSS and
-JavaScript. No frameworks, no build step, no `npm install`. Everything the
-game needs is in this repository.
+A complete, small Flappy Bird–style game — starring a peacock — written in
+plain HTML, CSS and JavaScript. No frameworks, no build step, no
+`npm install`. Everything the game needs is in this repository.
+
+Made by Nirdosh.
 
 ```
 flappy-bird-/
@@ -113,10 +115,29 @@ and it is the fastest way to learn what each number does.
 - `CONFIG.pipe.speedMax` — how fast things get at full difficulty.
 - `CONFIG.difficultyRamp` — raise it to 50 and the game stays easy for a long
   time.
-- `CONFIG.birdRadius` — the bird's collision size. Try `8`; the game becomes
-  much more forgiving, because the drawn bird and the *collided* bird are
-  deliberately different sizes.
-- `CONFIG.colors` — the whole palette in one place.
+- `CONFIG.birdRadius` — the peacock's collision size. The *drawn* peacock is
+  about 57 x 59 px but this circle is only 32 px across, and that deliberate
+  mismatch is what makes the game forgiving. Try `8` to make it very easy, or
+  `22` to make it brutal.
+- `CONFIG.colors` — the whole palette in one place, including every shade of
+  the peacock and its tail feathers.
+
+## The peacock
+
+The bird is drawn in four passes, back to front, in `drawBird()`:
+
+1. `drawTail()` — a fan of nine feathers, each a shaft plus a three-ring
+  "eye" spot at the tip. Longest feather in the middle so it reads as a fan.
+2. `drawBody()` — body ellipse, darker underside, and a wing that sweeps up
+  and back down on every flap.
+3. `drawHead()` — the long neck as a single thick stroked curve.
+4. Inside `drawHead()` — the crest (three stalks with balls on the ends),
+   head, beak and eye. The crest does more to say "peacock" than anything
+   else on screen.
+
+Everything is drawn in "bird space": the origin is the peacock's centre and
+`+x` is the direction it is travelling, so `drawBird` can rotate the whole
+thing with one `ctx.rotate(bird.tilt)`.
 
 Some slightly bigger exercises, roughly in order of difficulty:
 

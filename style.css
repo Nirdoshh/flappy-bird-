@@ -36,12 +36,23 @@ header {
   gap: 14px;
 }
 
+.title {
+  text-align: center;
+}
+
 h1 {
   margin: 0;
   font-size: 17px;
   letter-spacing: 3px;
   text-transform: uppercase;
-  opacity: 0.75;
+  opacity: 0.85;
+}
+
+.credit {
+  margin: 3px 0 0;
+  font-size: 11px;
+  letter-spacing: 1px;
+  opacity: 0.5;
 }
 
 button {

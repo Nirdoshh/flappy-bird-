@@ -1,7 +1,7 @@
 "use strict";
 
 /* =====================================================================
-   FLAPPY BIRD — a complete little game in one file.
+   FLAPPY PEACOCK — a complete little game in one file.
 
    The file is split into 8 numbered sections. Read it top to bottom:
 
@@ -29,12 +29,14 @@ const CONFIG = {
   world: { width: 360, height: 640 },
 
   /* --- the bird ---------------------------------------------------- */
-  gravity: 1800,        // pulled down every second (px/s²). Bigger = falls faster.
+  gravity: 2000,        // pulled down every second (px/s²). Bigger = falls faster.
   flapStrength: 620,     // instant upward speed from a flap (px/s)
   maxFallSpeed: 700,     // terminal velocity, stops the bird dropping forever
   birdStartX: 96,        // the bird never moves horizontally
   birdStartY: 300,
-  birdRadius: 14,        // size of the invisible circle used for collisions
+  birdRadius: 16,        // size of the invisible circle used for collisions.
+                        // Deliberately smaller than the drawn peacock, which
+                        // is what makes the game forgiving.
   tiltUp: -0.55,         // how far the nose points up, in radians
   tiltDown: 1.5,         // ...and down. 1.57 (≈90°) would be straight down.
   tiltSpeed: 9,          // how quickly the bird rotates between the two
@@ -78,9 +80,19 @@ const CONFIG = {
     pipe: "#5ab552",
     pipeLight: "#77cd6b",
     pipeDark: "#3f8c39",
-    bird: "#ffd23f",
-    birdWing: "#f0a500",
-    birdBeak: "#ff7a1a",
+    /* --- the peacock -------------------------------------------------- */
+    peacockBody: "#2f83ab",
+    peacockBodyDark: "#1d6085",
+    peacockNeck: "#48a0c4",
+    peacockWing: "#2a7f6f",
+    featherShaft: "#175b70",
+    ocellusOuter: "#2fbfd0",  // the bright ring on a tail feather
+    ocellusGold: "#e0ae4c",   // ...and the gold ring inside it
+    ocellusInner: "#123f68",  // ...and the dark eye in the middle
+    crestTip: "#f0c04a",
+    beak: "#e3d3ab",
+    eyeWhite: "#ffffff",
+    eyeDark: "#12232e",
     text: "#ffffff",
   },
 };
@@ -582,6 +594,10 @@ function drawGround() {
   ctx.fillRect(-20, top + 13, width + 40, 4);
 }
 
+// The peacock is drawn in four passes, back to front:
+//   tail fan -> body + wing -> neck + head -> crest, beak, eye
+// Everything is drawn in "bird space": the origin is the bird's centre and
+// +x is the way it is travelling.
 function drawBird() {
   const bird = state.bird;
 
@@ -589,43 +605,146 @@ function drawBird() {
   ctx.translate(bird.x, bird.y);
   ctx.rotate(bird.tilt);
 
-  // Wing: sweeps up and back down once per flap.
-  const wingProgress = bird.wingTimer / 0.35;
-  ctx.save();
-  ctx.translate(-2, 2);
-  ctx.rotate(-0.5 + Math.sin(wingProgress * Math.PI) * 1.2);
-  ctx.fillStyle = CONFIG.colors.birdWing;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 9, 6, 0, 0, Math.PI * 2);
-  ctx.fill();
+  drawTail();
+  drawBody(bird);
+  drawHead();
+
   ctx.restore();
+}
+
+// The fanned tail. Drawn first so the body overlaps it, which is what makes
+// it read as a peacock rather than a fan of feathers behind a blob.
+function drawTail() {
+  const colors = CONFIG.colors;
+  const feathers = 9;
+  const originX = -2;
+  const originY = 6;
+
+  for (let i = 0; i < feathers; i++) {
+    const t = i / (feathers - 1);
+
+    // Sweep from up-and-back (135°) through straight back (180°) to
+    // down-and-back (225°). In canvas, +y points down, so these angles
+    // open out behind the bird.
+    const angle = lerp(Math.PI * 0.75, Math.PI * 1.25, t);
+
+    // Longest feather in the middle of the fan, so it looks like a fan.
+    const length = 26 * (0.66 + 0.34 * Math.cos((t - 0.5) * Math.PI));
+
+    const tipX = originX + Math.cos(angle) * length;
+    const tipY = originY + Math.sin(angle) * length;
+
+    // The shaft.
+    ctx.strokeStyle = colors.featherShaft;
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(originX, originY);
+    ctx.lineTo(tipX, tipY);
+    ctx.stroke();
+
+    // The "eye" at the tip: three concentric ovals, squashed across the
+    // feather rather than along it. Rotating first lines the long axis up
+    // with the shaft.
+    ctx.save();
+    ctx.translate(tipX, tipY);
+    ctx.rotate(angle);
+    const rings = [
+      [6.2, 5.4, colors.ocellusOuter],
+      [4.1, 3.6, colors.ocellusGold],
+      [2.1, 1.9, colors.ocellusInner],
+    ];
+    for (const [rx, ry, color] of rings) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+function drawBody(bird) {
+  const colors = CONFIG.colors;
 
   // Body.
-  ctx.fillStyle = CONFIG.colors.bird;
+  ctx.fillStyle = colors.peacockBody;
   ctx.beginPath();
-  ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
+  ctx.ellipse(0, 2, 15, 12, -0.15, 0, Math.PI * 2);
   ctx.fill();
 
-  // Beak (pokes out past the collision circle, which is slightly kind).
-  ctx.fillStyle = CONFIG.colors.birdBeak;
+  // Darker underside, for a bit of shape.
+  ctx.fillStyle = colors.peacockBodyDark;
   ctx.beginPath();
-  ctx.moveTo(bird.radius - 2, -3);
-  ctx.lineTo(bird.radius + 9, 2);
-  ctx.lineTo(bird.radius - 2, 6);
+  ctx.ellipse(2, 7, 11, 6, -0.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Wing. Sweeps up and back down once per flap, exactly like before.
+  const wingProgress = bird.wingTimer / 0.35;
+  ctx.save();
+  ctx.rotate(-0.35 + Math.sin(wingProgress * Math.PI) * 0.9);
+  ctx.fillStyle = colors.peacockWing;
+  ctx.beginPath();
+  ctx.ellipse(-3, 0, 9.5, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawHead() {
+  const colors = CONFIG.colors;
+
+  // The long neck: a single stroked curve, drawn thick with round ends.
+  ctx.strokeStyle = colors.peacockNeck;
+  ctx.lineWidth = 7;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(6, -2);
+  ctx.quadraticCurveTo(16, -10, 12, -21);
+  ctx.stroke();
+
+  const hx = 12;
+  const hy = -23;
+
+  // Crest: three thin stalks, each ending in a little ball. This one detail
+  // does more than any other to say "peacock".
+  ctx.strokeStyle = colors.peacockNeck;
+  ctx.lineWidth = 1.4;
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath();
+    ctx.moveTo(hx, hy - 2);
+    ctx.lineTo(hx + i * 3.5, hy - 9);
+    ctx.stroke();
+
+    ctx.fillStyle = colors.crestTip;
+    ctx.beginPath();
+    ctx.arc(hx + i * 3.5, hy - 9.5, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Head.
+  ctx.fillStyle = colors.peacockBody;
+  ctx.beginPath();
+  ctx.arc(hx, hy, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Beak.
+  ctx.fillStyle = colors.beak;
+  ctx.beginPath();
+  ctx.moveTo(hx + 3, hy - 1);
+  ctx.lineTo(hx + 10, hy + 1.5);
+  ctx.lineTo(hx + 3, hy + 4);
   ctx.closePath();
   ctx.fill();
 
   // Eye.
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = colors.eyeWhite;
   ctx.beginPath();
-  ctx.arc(4, -6, 5, 0, Math.PI * 2);
+  ctx.arc(hx + 1.5, hy - 1.5, 2.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#222222";
+  ctx.fillStyle = colors.eyeDark;
   ctx.beginPath();
-  ctx.arc(6, -6, 2.2, 0, Math.PI * 2);
+  ctx.arc(hx + 2.2, hy - 1.5, 1.1, 0, Math.PI * 2);
   ctx.fill();
-
-  ctx.restore();
 }
 
 function drawScore() {
@@ -637,7 +756,7 @@ function drawMessages() {
   const { width, height } = CONFIG.world;
 
   if (state.mode === "ready") {
-    drawText("FLAPPY BIRD", width / 2, height * 0.2, { size: 32 });
+    drawText("FLAPPY PEACOCK", width / 2, height * 0.2, { size: 28 });
     drawText("Tap, click or press Space to flap", width / 2, height * 0.28, {
       size: 14,
       color: "#0d3c58",
